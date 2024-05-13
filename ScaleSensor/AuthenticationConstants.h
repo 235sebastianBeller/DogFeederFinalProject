@@ -1,8 +1,8 @@
 #ifndef AUTHENTICATIONCONSTANTS_H
 #define AUTHENTICATIONCONSTANTS_H
-#define WIFI_SSID  "YOUR_WIFI_SSID"
-#define WIFI_PASS  "YOUR_PASSWORD"
-#define MQTT_BROKER_HOST  "a3i9cvbxqqn25a-ats.iot.us-east-1.amazonaws.com"
+#define WIFI_SSID "YOUR_WIFI_SSID"
+#define WIFI_PASS "YOUR_PASSWORD"
+#define MQTT_BROKER_HOST "a3i9cvbxqqn25a-ats.iot.us-east-1.amazonaws.com"
 #define CLIENT_ID "YOUR_CLIENT_ID"
 
 const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
@@ -46,4 +46,4 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 -----END RSA PRIVATE KEY-----
 )KEY";
 
-#endif 
+#endif

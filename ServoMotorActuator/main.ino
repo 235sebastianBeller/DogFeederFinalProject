@@ -5,8 +5,8 @@
 #include <NTPClient.h>
 #include "Esp32.h"
 #include "ServoMotor.h"
-
 using namespace std;
+
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 WifiController wifiController(WIFI_SSID, WIFI_PASS);
