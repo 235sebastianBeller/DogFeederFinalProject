@@ -2,10 +2,10 @@
 
 Esp32::Esp32()
 {
-  activationCategory = 0;
-  anyWeigth = 0;
-  servoShouldBeOn = 0;
-  Serial.println("entre");
+  activationCategory = false;
+  anyWeigth = false;
+  servoState = false;
+  plateState = false;
 }
 
 bool Esp32::getActivationCategory()
@@ -18,9 +18,9 @@ bool Esp32::getAnyWeigth()
   return anyWeigth;
 }
 
-bool Esp32::getServoShouldBeOn()
+bool Esp32::getServoState()
 {
-  return servoShouldBeOn;
+  return servoState;
 }
 
 bool Esp32::isInTheTimeRanges(NTPClient timeClient)
@@ -52,6 +52,11 @@ string Esp32::getMinutes()
   return minutes;
 }
 
+bool Esp32::getPlateState()
+{
+  return plateState;
+}
+
 void Esp32::setActivationCategory(JsonObject inputDoc)
 {
   if (!inputDoc["activationCategory"].isNull())
@@ -64,10 +69,16 @@ void Esp32::setAnyWeigth(JsonObject inputDoc)
     anyWeigth = inputDoc["anyWeigth"].as<bool>();
 }
 
-void Esp32::setServoShouldBeOn(JsonObject inputDoc)
+void Esp32::setPlateState(JsonObject inputDoc)
 {
-  if (!inputDoc["servoShouldBeOn"].isNull())
-    servoShouldBeOn = inputDoc["servoShouldBeOn"].as<bool>();
+  if (!inputDoc["plateState"].isNull())
+    plateState = inputDoc["plateState"].as<bool>();
+}
+
+void Esp32::setServoServoState(JsonObject inputDoc)
+{
+  if (!inputDoc["servoState"].isNull())
+    servoState = inputDoc["servoState"].as<bool>();
 }
 
 void Esp32::setHours(JsonObject inputDoc)
@@ -82,17 +93,12 @@ void Esp32::setMinutes(JsonObject inputDoc)
     minutes = inputDoc["minutesToFeed"].as<string>();
 }
 
-void Esp32::setServoShouldBeOn(bool servoState)
-{
-  servoShouldBeOn = servoState;
-}
-
 void Esp32::reportDataToMqttClientController(MqttClientController &mqtt)
 {
   StaticJsonDocument<SIZE_OUTPUT> outputDoc;
+  outputDoc["state"]["reported"]["plateState"] = getPlateState();
   outputDoc["state"]["reported"]["activationCategory"] = getActivationCategory();
-  outputDoc["state"]["reported"]["anyWeigth"] = getAnyWeigth();
-  outputDoc["state"]["reported"]["servoShouldBeOn"] = getServoShouldBeOn();
+  outputDoc["state"]["reported"]["servoState"] = getServoState();
   outputDoc["state"]["reported"]["hoursToFeed"] = getHours();
   outputDoc["state"]["reported"]["minutesToFeed"] = getMinutes();
   mqtt.publishOnTopic(outputDoc, UPDATE_TOPIC);
@@ -100,11 +106,21 @@ void Esp32::reportDataToMqttClientController(MqttClientController &mqtt)
 
 void Esp32::setData(JsonObject inputDoc)
 {
+  setPlateState(inputDoc);
   setActivationCategory(inputDoc);
-  setAnyWeigth(inputDoc);
-  setServoShouldBeOn(inputDoc);
+  setServoServoState(inputDoc);
   setHours(inputDoc);
   setMinutes(inputDoc);
+}
+
+void Esp32::setServoState(bool servoState)
+{
+  this->servoState = servoState;
+}
+
+void Esp32::setPlateState(bool plateState)
+{
+  this->plateState = plateState;
 }
 
 void Esp32::setActivationCategory(bool activationCategory)

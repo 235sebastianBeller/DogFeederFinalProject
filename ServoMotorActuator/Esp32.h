@@ -12,7 +12,8 @@ class Esp32
 private:
   bool activationCategory;
   bool anyWeigth;
-  bool servoShouldBeOn;
+  bool servoState;
+  bool plateState;
   string hours;
   string minutes;
 
@@ -20,18 +21,21 @@ public:
   Esp32();
   bool getActivationCategory();
   bool getAnyWeigth();
-  bool getServoShouldBeOn();
+  bool getServoState();
   bool isInTheTimeRanges(NTPClient timeClient);
+  bool getPlateState();
   string getHours();
   string getMinutes();
+  void setPlateState(JsonObject inputDoc);
   void setActivationCategory(JsonObject inputDoc);
   void setAnyWeigth(JsonObject inputDoc);
-  void setServoShouldBeOn(JsonObject inputDoc);
   void setHours(JsonObject inputDoc);
   void setMinutes(JsonObject inputDoc);
   void setData(JsonObject inputDoc);
-  void setServoShouldBeOn(bool stateServo);
+  void setServoServoState(JsonObject inputDoc);
   void setActivationCategory(bool inputDoc);
+  void setServoState(bool servoState);
+  void setPlateState(bool plateState);
   void reportDataToMqttClientController(MqttClientController &mqtt);
   void activateServoMotor(ServoMotor servo);
   void stopServoMotor(ServoMotor servo);

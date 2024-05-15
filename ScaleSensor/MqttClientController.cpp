@@ -39,12 +39,14 @@ bool MqttClientController::isTime(unsigned long previousMillis, unsigned long no
   return nowMillis - previousPublishMillis >= LIMIT_DELAY;
 }
 
-void MqttClientController::publishOnTopic(StaticJsonDocument<JSON_OBJECT_SIZE(1)> outputDoc, String publishTopic)
+void MqttClientController::publishOnTopic(StaticJsonDocument<JSON_OBJECT_SIZE(1)> &outputDoc, String publishTopic)
 {
   if (!mqttClient.connected())
   {
     Serial.println("MQTT broker not connected!");
     delay(LIMIT_DELAY);
+    connectWithClientId(CLIENT_ID);
+    suscribeOnTopic(UPDATE_TOPIC);
     return;
   }
   unsigned long now = millis();
@@ -52,8 +54,8 @@ void MqttClientController::publishOnTopic(StaticJsonDocument<JSON_OBJECT_SIZE(1)
   {
     previousPublishMillis = now;
     serializeJson(outputDoc, outputBuffer);
-    Serial.print(outputBuffer);
-    mqttClient.publish(publishTopic.c_str(), outputBuffer);
+    Serial.println(outputBuffer);
+    Serial.println(mqttClient.publish(publishTopic.c_str(), outputBuffer));
   }
 }
 

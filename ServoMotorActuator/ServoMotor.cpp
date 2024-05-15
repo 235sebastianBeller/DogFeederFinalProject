@@ -7,14 +7,13 @@ ServoMotor::ServoMotor(byte signalPin)
 
 void ServoMotor::start()
 {
-  servo.write(80);
+  servo.write(85);
 }
 
 void ServoMotor::stop()
 {
   servo.write(95);
 }
-
 ServoMotor::~ServoMotor()
 {
 }

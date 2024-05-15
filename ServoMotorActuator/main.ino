@@ -5,8 +5,8 @@
 #include <NTPClient.h>
 #include "Esp32.h"
 #include "ServoMotor.h"
-using namespace std;
 
+using namespace std;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 WifiController wifiController(WIFI_SSID, WIFI_PASS);
@@ -47,49 +47,37 @@ void setup()
   delay(400);
 }
 
-int cont = 0;
-
-void startToRotate()
+int counter = 0;
+bool isServoMovementRequired()
 {
-  if (cont < 10000)
+  return (!esp.getPlateState()) && (esp.isInTheTimeRanges(timeClient) || esp.getServoState() || esp.getActivationCategory());
+}
+void activar()
+{
+  esp.activateServoMotor(servoMotor);
+  if (!esp.getServoState())
   {
-    esp.activateServoMotor(servoMotor);
-    esp.setServoShouldBeOn(true);
-  }
-  else
-  {
-    esp.stopServoMotor(servoMotor);
-    esp.setServoShouldBeOn(false);
-  }
-  if (cont == 0 || cont == 10000)
-  {
-    Serial.println(cont);
-    delay(800);
+    esp.setServoState(true);
     esp.reportDataToMqttClientController(mqttController);
   }
-  if (timeClient.getSeconds() == 0 && cont != 0)
+}
+void startToRotate()
+{
+  if (isServoMovementRequired())
   {
-    cont = 0;
+    activar();
   }
-  cont++;
+  else if (esp.getServoState())
+  {
+    esp.stopServoMotor(servoMotor);
+    esp.setServoState(false);
+    esp.reportDataToMqttClientController(mqttController);
+  }
 }
 
 void loop()
 {
   timeClient.update();
-  if (esp.getActivationCategory())
-  {
-    esp.activateServoMotor(servoMotor);
-  }
-  else if (esp.getServoShouldBeOn() || esp.isInTheTimeRanges(timeClient))
-  {
-    startToRotate();
-  }
-  else
-  {
-    cont = 0;
-    esp.setServoShouldBeOn(false);
-    esp.stopServoMotor(servoMotor);
-  }
+  startToRotate();
   mqttController.startListening();
 }

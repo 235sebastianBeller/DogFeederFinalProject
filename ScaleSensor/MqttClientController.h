@@ -20,7 +20,7 @@ public:
   void setServerForMqtt(WifiController &wifiController);
   void connectWithClientId(String clientId);
   void standBy();
-  void publishOnTopic(StaticJsonDocument<JSON_OBJECT_SIZE(1)> outputDoc, String publishTopic);
+  void publishOnTopic(StaticJsonDocument<JSON_OBJECT_SIZE(1)> &outputDoc, String publishTopic);
   void suscribeOnTopic(String topic);
   bool isTime(unsigned long previousMillis, unsigned long nowMillis);
   ~MqttClientController();
