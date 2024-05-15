@@ -47,12 +47,15 @@ void setup()
   delay(400);
 }
 
-int counter = 0;
 bool isServoMovementRequired()
 {
-  return (!esp.getPlateState()) && (esp.isInTheTimeRanges(timeClient) || esp.getServoState() || esp.getActivationCategory());
+  return (!esp.getPlateState()) &&
+   (esp.isInTheTimeRanges(timeClient) || 
+   esp.getServoState() || 
+   esp.getActivationCategory());
 }
-void activar()
+
+void activate()
 {
   esp.activateServoMotor(servoMotor);
   if (!esp.getServoState())
@@ -61,11 +64,12 @@ void activar()
     esp.reportDataToMqttClientController(mqttController);
   }
 }
+
 void startToRotate()
 {
   if (isServoMovementRequired())
   {
-    activar();
+    activate();
   }
   else if (esp.getServoState())
   {
