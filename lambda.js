@@ -242,6 +242,37 @@ const saveObjectNameIntentHandler = {
 };
 
 
+const selectObjectIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "SelectObjectIntent"
+    );
+  },
+  async handle(handlerInput) {
+    var speakOutput = `No se encontro el objeto, se quedara con el nombre por defecto ${thingName}`;
+    const objectNameSlot = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "objectName"
+    );
+    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
+    var data;
+    await getData(file).then((result) => (data = result || {}));
+    data[userId] ??= [];
+    var objects = data[userId];
+    const objectName = findObject(objects, objectNameSlot);
+    if (objectName) {
+      thingName = objectName;
+      speakOutput = `Ahora se esta usando a ${thingName}`;
+    }
+
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return (
@@ -405,7 +436,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     GetFeederModeIntent,
     SetFoodPortionIntent,
     ScheduleHourFeeding,
-    saveObjectNameIntentHandler
+    saveObjectNameIntentHandler,
+    selectObjectIntentHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
