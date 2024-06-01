@@ -61,6 +61,30 @@ function getShadowPromise(params) {
   });
 }
 
+const AutomaticFeedingIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "AutomaticFeedingIntent"
+    );
+  },
+  handle(handlerInput) {
+    var speakOutput = "Error";
+    console.log(thingName);
+    let automaticModeJson = getAutomaticModeJson(thingName);
+    IotData.updateThingShadow(automaticModeJson, function (err, data) {
+      if (err) console.log(err);
+    });
+    speakOutput =
+      "Modo automatico activado! Se alimentara si el plato no tiene la porcion adecuada";
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return (
@@ -216,7 +240,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     CancelAndStopIntentHandler,
     FallbackIntentHandler,
     SessionEndedRequestHandler,
-    IntentReflectorHandler
+    IntentReflectorHandler, 
+    AutomaticFeedingIntentHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
