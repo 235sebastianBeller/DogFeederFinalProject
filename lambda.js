@@ -88,6 +88,38 @@ const GetFeederModeIntent = {
       .getResponse();
   },
 };
+
+const SetFoodPortionIntent = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "SetFoodPortionIntent"
+    );
+  },
+  handle(handlerInput) {
+    var foodPortion = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "foodPortion"
+    );
+    let updateFoodPortionParams = getUpdateFoodPortionJson(
+      thingName,
+      foodPortion
+    );
+    updateFoodPortionParams["payload"] = JSON.stringify(
+      updateFoodPortionParams["payload"]
+    );
+    IotData.updateThingShadow(updateFoodPortionParams, function (err, data) {
+      if (err) console.log(err);
+    });
+    var speakOutput = Se establecio la porcion ${foodPortion} gramos con exito;
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
 const AutomaticFeedingIntentHandler = {
   canHandle(handlerInput) {
     return (
@@ -295,7 +327,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     IntentReflectorHandler, 
     AutomaticFeedingIntentHandler, 
     ScheduledFeedingIntentHandler,
-    GetFeederModeIntent
+    GetFeederModeIntent,
+    SetFoodPortionIntent
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
