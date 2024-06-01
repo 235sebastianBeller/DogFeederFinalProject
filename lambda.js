@@ -86,7 +86,7 @@ const GetFeederModeIntent = {
       .speak(speakOutput)
       .reprompt(speakOutput)
       .getResponse();
-  },
+ },
 };
 
 const SetFoodPortionIntent = {
@@ -112,12 +112,12 @@ const SetFoodPortionIntent = {
     IotData.updateThingShadow(updateFoodPortionParams, function (err, data) {
       if (err) console.log(err);
     });
-    var speakOutput = Se establecio la porcion ${foodPortion} gramos con exito;
+    var speakOutput = `Se establecio la porcion ${foodPortion} gramos con exito`;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
       .getResponse();
-  },
+},
 };
 
 const AutomaticFeedingIntentHandler = {
@@ -160,6 +160,42 @@ const ScheduledFeedingIntentHandler = {
     });
 
     speakOutput = "Modo programable activado!, diga la hora a alimentar";
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
+const ScheduleHourFeeding = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "ScheduleHourFeeding"
+    );
+  },
+  async handle(handlerInput) {
+    const hour = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "feedingHour"
+    );
+    const minutes = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "feedingMinutes"
+    );
+    await getShadowPromise(getShadowJson(thingName)).then((result) => {
+      hoursSaved = result.state.desired.hoursToFeed || "";
+      minutesSaved = result.state.desired.minutesToFeed || "";
+    });
+    hoursSaved += String(hour) + " ";
+    minutesSaved += String(minutes) + " ";
+    let updateTimeJson = getUpdateTimeJson(thingName, hoursSaved, minutesSaved);
+    updateTimeJson["payload"] = JSON.stringify(updateTimeJson["payload"]);
+    IotData.updateThingShadow(updateTimeJson, function (err, data) {
+      if (err) console.log(err);
+    });
+    var speakOutput = `se programo la comida a las ${hour} con ${minutes}`;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -328,7 +364,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     AutomaticFeedingIntentHandler, 
     ScheduledFeedingIntentHandler,
     GetFeederModeIntent,
-    SetFoodPortionIntent
+    SetFoodPortionIntent,
+    ScheduleHourFeeding
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
