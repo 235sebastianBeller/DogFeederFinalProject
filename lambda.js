@@ -61,6 +61,33 @@ function getShadowPromise(params) {
   });
 }
 
+const GetFeederModeIntent = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "GetFeederModeIntent"
+    );
+  },
+
+  async handle(handlerInput) {
+    var modeFeeding;
+    await getShadowPromise(getShadowJson(thingName)).then(
+      (result) => (modeFeeding = result.state.reported.activationCategory)
+    );
+    const modes = [
+      "Esta con el modo programable",
+      "Esta con el modo automatico",
+    ];
+    console.log(modeFeeding);
+    console.log(getShadowJson(thingName));
+    var speakOutput = modes[Number(modeFeeding)] || "Error";
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
 const AutomaticFeedingIntentHandler = {
   canHandle(handlerInput) {
     return (
@@ -267,7 +294,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     SessionEndedRequestHandler,
     IntentReflectorHandler, 
     AutomaticFeedingIntentHandler, 
-    ScheduledFeedingIntentHandler
+    ScheduledFeedingIntentHandler,
+    GetFeederModeIntent
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
