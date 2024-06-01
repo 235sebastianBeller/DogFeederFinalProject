@@ -85,6 +85,29 @@ const AutomaticFeedingIntentHandler = {
   },
 };
 
+const ScheduledFeedingIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "ScheduledFeedingIntent"
+    );
+  },
+  handle(handlerInput) {
+    var speakOutput = "Error";
+    let scheduleModeJson = getScheduleModeJson(thingName);
+    IotData.updateThingShadow(scheduleModeJson, function (err, data) {
+      if (err) console.log(err);
+    });
+
+    speakOutput = "Modo programable activado!, diga la hora a alimentar";
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return (
@@ -162,6 +185,8 @@ const CancelAndStopIntentHandler = {
     return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
+
+
 
 const FallbackIntentHandler = {
   canHandle(handlerInput) {
@@ -241,7 +266,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     FallbackIntentHandler,
     SessionEndedRequestHandler,
     IntentReflectorHandler, 
-    AutomaticFeedingIntentHandler
+    AutomaticFeedingIntentHandler, 
+    ScheduledFeedingIntentHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
