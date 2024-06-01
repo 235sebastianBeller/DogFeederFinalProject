@@ -8,7 +8,7 @@ class ServoMotor
 {
 private:
   byte signalPin;
-  Servo servo;
+  Servo servo; 
 
 public:
   ServoMotor(byte signalPin);
