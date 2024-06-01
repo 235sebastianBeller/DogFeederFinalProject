@@ -203,6 +203,45 @@ const ScheduleHourFeeding = {
   },
 };
 
+
+const saveObjectNameIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "SaveObjectNameIntent"
+    );
+  },
+  async handle(handlerInput) {
+    var speakOutput = "El objeto ya existe";
+    const objectNameSlot = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "objectName"
+    );
+    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
+    var data;
+    await getData(file).then((result) => (data = result || {}));
+    data[userId] ??= [];
+    var objects = data[userId];
+    const object = findObject(objects, objectNameSlot);
+    if (!object) {
+      objects.push(objectNameSlot);
+      await saveData(data, file)
+        .then(() => {
+          speakOutput = "Se creó el objeto exitosamente";
+        })
+        .catch(() => {
+          speakOutput = "Ocurrió un problema al crear el objeto";
+        });
+    }
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return (
@@ -365,7 +404,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     ScheduledFeedingIntentHandler,
     GetFeederModeIntent,
     SetFoodPortionIntent,
-    ScheduleHourFeeding
+    ScheduleHourFeeding,
+    saveObjectNameIntentHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
