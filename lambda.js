@@ -61,6 +61,26 @@ function getShadowPromise(params) {
   });
 }
 
+
+const GetTheCurrentObjectNameIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "GetTheCurrentObjectNameIntent"
+    );
+  },
+  handle(handlerInput) {
+    var speakOutput;
+    
+    speakOutput =`estas usando a ${thingName}`;
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
 const GetFeederModeIntent = {
   canHandle(handlerInput) {
     return (
@@ -281,7 +301,7 @@ const LaunchRequestHandler = {
   },
   handle(handlerInput) {
     const speakOutput =
-      "Bienvenido al alimentador de perros, puedes pedir ayuda, crear un objeto o usar un objeto inteligente";
+      "Bienvenido al alimentador de perros, puedes pedir ayuda, crear un objeto o usar un objeto inteligente, consultar que objeto se esta usando";
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -437,7 +457,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     SetFoodPortionIntent,
     ScheduleHourFeeding,
     saveObjectNameIntentHandler,
-    selectObjectIntentHandler
+    selectObjectIntentHandler,
+    GetTheCurrentObjectNameIntentHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
