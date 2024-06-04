@@ -1,9 +1,10 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
-#define UPDATE_TOPIC "$aws/things/dogFeeder/shadow/update"
-#define GET_DATA_DOG_FEEDER_TOPIC "prueba/dogFeeder/out"
-#define UPDATE_DELTA_TOPIC "$aws/things/dogFeeder/shadow/update/delta"
-#define GET_TOPIC "$aws/things/dogFeeder/shadow/get"
+#define DEVICE_NAME "dogfeeder"
+#define UPDATE_TOPIC "$aws/things/" DEVICE_NAME "/shadow/update"
+#define GET_DATA_DOG_FEEDER_TOPIC "prueba/" DEVICE_NAME "/out"
+#define UPDATE_DELTA_TOPIC "$aws/things/" DEVICE_NAME "/shadow/update/delta"
+#define GET_TOPIC "$aws/things/" DEVICE_NAME "/shadow/get"
 #include <ArduinoJson.h>
 
 const int MQTT_BROKER_PORT = 8883;
@@ -24,4 +25,4 @@ const String topics[]={GET_DATA_DOG_FEEDER_TOPIC,GET_TOPIC,UPDATE_TOPIC,UPDATE_D
 
 
 
-#endif 
+#endif
