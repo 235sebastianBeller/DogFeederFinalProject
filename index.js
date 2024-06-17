@@ -1,52 +1,16 @@
+const constants=require("./constants");
+const ThingJsonController= require("./ThingJsonController");
 const Alexa = require("ask-sdk-core");
 const AWS = require("aws-sdk");
+const thingJsonController=new ThingJsonController();
 const IotData = new AWS.IotData({
-  endpoint: "YOUR_END_POINT"
+  endpoint: constants.END_POINT,
 });
-const file = "YOUR.JSON";
+
 const s3 = new AWS.S3();
-var thingName = "YOUR_DEFAULT_OBJECT";
-var hoursSaved = "",minutesSaved = "";
 
-const getAutomaticModeJson = (thing) => {
-  return {
-    thingName: thing,
-    payload: '{"state": {"desired": {"activationCategory": true}}}',
-  };
-};
-
-const getScheduleModeJson = (thing) => {
-  return {
-    thingName: thing,
-    payload: '{"state": {"desired": {"activationCategory": false}}}',
-  };
-};
-
-const getShadowJson = (thing) => {
-  return { thingName: thing };
-};
-
-const getUpdateTimeJson = (thing, hoursSaved, minutesSaved) => {
-  return {
-    thingName: thing,
-    payload: {
-      state: {
-        desired: { hoursToFeed: hoursSaved, minutesToFeed: minutesSaved },
-      },
-    },
-  };
-};
-
-const getUpdateFoodPortionJson = (thing, foodPortion) => {
-  return {
-    thingName: thing,
-    payload: {
-      state: {
-        desired: { foodPortion: Number(foodPortion) },
-      },
-    },
-  };
-};
+var hoursSaved = "",
+  minutesSaved = "";
 
 function getShadowPromise(params) {
   return new Promise((resolve, reject) => {
@@ -61,6 +25,58 @@ function getShadowPromise(params) {
   });
 }
 
+async function getData(file) {
+  const params = {
+    Bucket: constants.BUCKET_NAME,
+    Key: constants.FILE,
+  };
+  var response = await s3
+    .getObject(params)
+    .promise()
+    .catch((error) => {
+      console.log(error);
+    });
+  response = response.Body.toString("utf-8");
+  return JSON.parse(response);
+}
+
+async function saveData(data, file) {
+  const jsonString = JSON.stringify(data);
+  const params = {
+    Bucket: constants.BUCKET_NAME,
+    Key: constants.FILE,
+    Body: jsonString,
+    ContentType: "application/json",
+  };
+  await s3
+    .upload(params)
+    .promise()
+    .catch((error) => {
+      console.log(error);
+    });
+}
+function findObject(objects, objectName) {
+  const object = objects.find((objectname) => objectname == objectName);
+  return object;
+}
+
+
+
+const LaunchRequestHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "LaunchRequest"
+    );
+  },
+  handle(handlerInput) {
+
+    const speakOutput =constants.LAUNCH_REQUEST_MESSAGE;
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
 
 const GetTheCurrentObjectNameIntentHandler = {
   canHandle(handlerInput) {
@@ -72,8 +88,7 @@ const GetTheCurrentObjectNameIntentHandler = {
   },
   handle(handlerInput) {
     var speakOutput;
-    
-    speakOutput =`estas usando a ${thingName}`;
+    speakOutput =`estas usando a ${thingJsonController.getThingName()}`;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -81,65 +96,73 @@ const GetTheCurrentObjectNameIntentHandler = {
   },
 };
 
-const GetFeederModeIntent = {
+const saveObjectNameIntentHandler = {
   canHandle(handlerInput) {
     return (
       Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
       Alexa.getIntentName(handlerInput.requestEnvelope) ===
-        "GetFeederModeIntent"
+        "SaveObjectNameIntent"
     );
   },
-
   async handle(handlerInput) {
-    var modeFeeding;
-    await getShadowPromise(getShadowJson(thingName)).then(
-      (result) => (modeFeeding = result.state.reported.activationCategory)
+    var speakOutput = constants.ERROR_MESSAGE_OBJECT_ALREADY_EXISTS;
+    const objectNameSlot = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "objectName"
     );
-    const modes = [
-      "Esta con el modo programable",
-      "Esta con el modo automatico",
-    ];
-    console.log(modeFeeding);
-    console.log(getShadowJson(thingName));
-    var speakOutput = modes[Number(modeFeeding)] || "Error";
+    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
+    var data;
+    await getData(constants.FILE).then((result) => (data = result || {}));
+    data[userId] ??= [];
+    var objects = data[userId];
+    const object = findObject(objects, objectNameSlot);
+    if (!object) {
+      objects.push(objectNameSlot);
+      await saveData(data, constants.FILE)
+        .then(() => {
+          speakOutput = constants.SUCCESSFUL_CREATE_OBJECT_MESSAGE
+        })
+        .catch(() => {
+          speakOutput =constants.ERROR_CREATE_OBJECT_MESSAGE;
+        });
+    }
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
       .getResponse();
- },
+  },
 };
 
-const SetFoodPortionIntent = {
+const selectObjectIntentHandler = {
   canHandle(handlerInput) {
     return (
       Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
-      Alexa.getIntentName(handlerInput.requestEnvelope) ===
-        "SetFoodPortionIntent"
+      Alexa.getIntentName(handlerInput.requestEnvelope) === "SelectObjectIntent"
     );
   },
-  handle(handlerInput) {
-    var foodPortion = Alexa.getSlotValue(
+  async handle(handlerInput) {
+    var speakOutput = `No se encontro el objeto, se quedara con el nombre  ${thingJsonController.getThingName()}`;
+    const objectNameSlot = Alexa.getSlotValue(
       handlerInput.requestEnvelope,
-      "foodPortion"
+      "objectName"
     );
-    let updateFoodPortionParams = getUpdateFoodPortionJson(
-      thingName,
-      foodPortion
-    );
-    updateFoodPortionParams["payload"] = JSON.stringify(
-      updateFoodPortionParams["payload"]
-    );
-    IotData.updateThingShadow(updateFoodPortionParams, function (err, data) {
-      if (err) console.log(err);
-    });
-    var speakOutput = `Se establecio la porcion ${foodPortion} gramos con exito`;
+    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
+    var data;
+    await getData(constants.FILE).then((result) => (data = result || {}));
+    data[userId] ??= [];
+    var objects = data[userId];
+    const objectName = findObject(objects, objectNameSlot);
+    if (objectName) {
+      thingJsonController.setThingName(objectName);
+      speakOutput = `Ahora se esta usando a ${thingJsonController.getThingName()}`;
+    }
+
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
       .getResponse();
-},
+  },
 };
-
 const AutomaticFeedingIntentHandler = {
   canHandle(handlerInput) {
     return (
@@ -149,14 +172,12 @@ const AutomaticFeedingIntentHandler = {
     );
   },
   handle(handlerInput) {
-    var speakOutput = "Error";
-    console.log(thingName);
-    let automaticModeJson = getAutomaticModeJson(thingName);
+    var speakOutput = constants.ERROR_MESSAGE;
+    let automaticModeJson=thingJsonController.getAutomaticModeJson();
     IotData.updateThingShadow(automaticModeJson, function (err, data) {
       if (err) console.log(err);
     });
-    speakOutput =
-      "Modo automatico activado! Se alimentara si el plato no tiene la porcion adecuada";
+    speakOutput = constants.ACTIVATION_MODE_MESSAGE;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -173,13 +194,13 @@ const ScheduledFeedingIntentHandler = {
     );
   },
   handle(handlerInput) {
-    var speakOutput = "Error";
-    let scheduleModeJson = getScheduleModeJson(thingName);
+    var speakOutput = constants.ERROR_MESSAGE;
+    let scheduleModeJson=thingJsonController.getScheduleModeJson();
     IotData.updateThingShadow(scheduleModeJson, function (err, data) {
       if (err) console.log(err);
     });
 
-    speakOutput = "Modo programable activado!, diga la hora a alimentar";
+    speakOutput = constants.SCHEDULE_MODE_MESSAGE;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -187,6 +208,27 @@ const ScheduledFeedingIntentHandler = {
   },
 };
 
+const GetFeederModeIntent = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "GetFeederModeIntent"
+    );
+  },
+  async handle(handlerInput) {
+    var modeFeeding;
+    await getShadowPromise(thingJsonController.getShadowJson()).then(
+      (result) => (modeFeeding = result.state.reported.activationCategory)
+    );
+    const modes = constants.MODE_STATES;
+    var speakOutput = modes[Number(modeFeeding)] || constants.ERROR_MESSAGE;
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
 const ScheduleHourFeeding = {
   canHandle(handlerInput) {
     return (
@@ -204,104 +246,18 @@ const ScheduleHourFeeding = {
       handlerInput.requestEnvelope,
       "feedingMinutes"
     );
-    await getShadowPromise(getShadowJson(thingName)).then((result) => {
+    await getShadowPromise(thingJsonController.getShadowJson()).then((result) => {
       hoursSaved = result.state.desired.hoursToFeed || "";
       minutesSaved = result.state.desired.minutesToFeed || "";
     });
     hoursSaved += String(hour) + " ";
     minutesSaved += String(minutes) + " ";
-    let updateTimeJson = getUpdateTimeJson(thingName, hoursSaved, minutesSaved);
+    let updateTimeJson=thingJsonController.getUpdateTimeJson(hoursSaved,minutesSaved);
     updateTimeJson["payload"] = JSON.stringify(updateTimeJson["payload"]);
     IotData.updateThingShadow(updateTimeJson, function (err, data) {
       if (err) console.log(err);
     });
     var speakOutput = `se programo la comida a las ${hour} con ${minutes}`;
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt(speakOutput)
-      .getResponse();
-  },
-};
-
-
-const saveObjectNameIntentHandler = {
-  canHandle(handlerInput) {
-    return (
-      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
-      Alexa.getIntentName(handlerInput.requestEnvelope) ===
-        "SaveObjectNameIntent"
-    );
-  },
-  async handle(handlerInput) {
-    var speakOutput = "El objeto ya existe";
-    const objectNameSlot = Alexa.getSlotValue(
-      handlerInput.requestEnvelope,
-      "objectName"
-    );
-    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
-    var data;
-    await getData(file).then((result) => (data = result || {}));
-    data[userId] ??= [];
-    var objects = data[userId];
-    const object = findObject(objects, objectNameSlot);
-    if (!object) {
-      objects.push(objectNameSlot);
-      await saveData(data, file)
-        .then(() => {
-          speakOutput = "Se creó el objeto exitosamente";
-        })
-        .catch(() => {
-          speakOutput = "Ocurrió un problema al crear el objeto";
-        });
-    }
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt(speakOutput)
-      .getResponse();
-  },
-};
-
-
-const selectObjectIntentHandler = {
-  canHandle(handlerInput) {
-    return (
-      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
-      Alexa.getIntentName(handlerInput.requestEnvelope) === "SelectObjectIntent"
-    );
-  },
-  async handle(handlerInput) {
-    var speakOutput = `No se encontro el objeto, se quedara con el nombre por defecto ${thingName}`;
-    const objectNameSlot = Alexa.getSlotValue(
-      handlerInput.requestEnvelope,
-      "objectName"
-    );
-    const userId = Alexa.getUserId(handlerInput.requestEnvelope);
-    var data;
-    await getData(file).then((result) => (data = result || {}));
-    data[userId] ??= [];
-    var objects = data[userId];
-    const objectName = findObject(objects, objectNameSlot);
-    if (objectName) {
-      thingName = objectName;
-      speakOutput = `Ahora se esta usando a ${thingName}`;
-    }
-
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .reprompt(speakOutput)
-      .getResponse();
-  },
-};
-
-const LaunchRequestHandler = {
-  canHandle(handlerInput) {
-    return (
-      Alexa.getRequestType(handlerInput.requestEnvelope) === "LaunchRequest"
-    );
-  },
-  handle(handlerInput) {
-    const speakOutput =
-      "Bienvenido al alimentador de perros, puedes pedir ayuda, crear un objeto o usar un objeto inteligente, consultar que objeto se esta usando";
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -320,15 +276,40 @@ const GetPlateStateIntent = {
   async handle(handlerInput) {
     var state;
     var foodPortion;
-    await getShadowPromise(getShadowJson(thingName)).then((result) => {
-      state = result.state.reported.plateState;
-      foodPortion = result.state.reported.foodPortion || 50;
+    await getShadowPromise(thingJsonController.getShadowJson()).then(
+      (result) => {
+        state = result.state.reported.plateState;
+        foodPortion=result.state.reported.foodPortion || constants.DEFAULT_FOOD_PORTION;
+      }
+    );
+    const states = [`es menor a ${foodPortion} gramos`, `Es mas que ${foodPortion} gramos`];
+    var speakOutput = states[Number(state)] ?? constants.ERROR_MESSAGE;
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  },
+};
+
+const SetFoodPortionIntent = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === "IntentRequest" &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) ===
+        "SetFoodPortionIntent"
+    );
+  },
+  handle(handlerInput) {
+    var foodPortion=Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      "foodPortion"
+    );
+   let updateFoodPortionParams=thingJsonController.getUpdateFoodPortionJson(foodPortion);
+    updateFoodPortionParams["payload"] = JSON.stringify(updateFoodPortionParams["payload"]);
+    IotData.updateThingShadow(updateFoodPortionParams, function (err, data) {
+      if (err) console.log(err);
     });
-    const states = [
-      `es menor a ${foodPortion} gramos`,
-      `Es mas que ${foodPortion} gramos`,
-    ];
-    var speakOutput = states[Number(state)] ?? "Error";
+    var speakOutput = `Se establecio la porcion ${foodPortion} gramos con exito`;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -344,9 +325,7 @@ const HelpIntentHandler = {
     );
   },
   handle(handlerInput) {
-    const speakOutput =
-      "Tienes las siguientes opciones: alimentar ahora, programar alimentacion, consultar modo de alimentacion, consultar el estado del plato, fijar la porcion de comida";
-
+    const speakOutput =constants.HELP_INTENT_MESSAGE;
     return handlerInput.responseBuilder
       .speak(speakOutput)
       .reprompt(speakOutput)
@@ -365,13 +344,10 @@ const CancelAndStopIntentHandler = {
     );
   },
   handle(handlerInput) {
-    const speakOutput = "Adios!";
-
+    const speakOutput = constants.GOOD_BYE_MESSAGE;
     return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
-
-
 
 const FallbackIntentHandler = {
   canHandle(handlerInput) {
@@ -382,7 +358,7 @@ const FallbackIntentHandler = {
     );
   },
   handle(handlerInput) {
-    const speakOutput = "Lo siento, no te entiendo. Intentalo mas tarde.";
+    const speakOutput =constants.FALLBACK_INTENT_MESSAGE;
 
     return handlerInput.responseBuilder
       .speak(speakOutput)
@@ -431,8 +407,7 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    const speakOutput =
-      "Lo siento ocurrio un problema haciendo lo que me pediste, intentalo de nuevo.";
+    const speakOutput =constants.ERROR_HANDLER_MESSAGE;
     console.log(`~~~~ Error handled: ${JSON.stringify(error)}`);
 
     return handlerInput.responseBuilder
@@ -442,23 +417,24 @@ const ErrorHandler = {
   },
 };
 
+
 exports.handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
     LaunchRequestHandler,
+    ScheduledFeedingIntentHandler,
+    selectObjectIntentHandler,
+    AutomaticFeedingIntentHandler,
+    GetFeederModeIntent,
+    saveObjectNameIntentHandler,
+    GetTheCurrentObjectNameIntentHandler,
+    SetFoodPortionIntent,
     HelpIntentHandler,
     GetPlateStateIntent,
+    ScheduleHourFeeding,
     CancelAndStopIntentHandler,
     FallbackIntentHandler,
-    SessionEndedRequestHandler,
-    IntentReflectorHandler, 
-    AutomaticFeedingIntentHandler, 
-    ScheduledFeedingIntentHandler,
-    GetFeederModeIntent,
-    SetFoodPortionIntent,
-    ScheduleHourFeeding,
-    saveObjectNameIntentHandler,
-    selectObjectIntentHandler,
-    GetTheCurrentObjectNameIntentHandler
+    IntentReflectorHandler,
+    SessionEndedRequestHandler
   )
   .addErrorHandlers(ErrorHandler)
   .withCustomUserAgent("sample/hello-world/v1.2")
