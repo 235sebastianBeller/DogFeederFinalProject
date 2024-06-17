@@ -15,6 +15,7 @@ private:
   string hours;
   string minutes;
   float previousWeigth;
+  float weigth;
   int foodPortion;
 
 public:
@@ -30,9 +31,10 @@ public:
   void setFoodPortion( JsonObject inputDoc);
   void setData( JsonObject  inputDoc);
   void reportDataToMqttClientController(MqttClientController& mqtt);
+  void setWeigth(float weigth);
   void setActivationCategory(bool inputDoc);
   void setPlateState(bool plateState);
-  void handleTheWeightPublication(float weigth,MqttClientController& mqtt);
+  void handleTheWeightPublication(MqttClientController& mqtt);
   ~Esp32();
 };
 #endif

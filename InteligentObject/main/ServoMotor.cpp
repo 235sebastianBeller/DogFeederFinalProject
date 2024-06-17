@@ -4,7 +4,7 @@ ServoMotor::ServoMotor(byte signalPin){
   servo.attach(signalPin); 
 }
 void ServoMotor::start(){
-  servo.write(85);
+  servo.write(70);
 }
 void ServoMotor::stop(){
   servo.write(95);

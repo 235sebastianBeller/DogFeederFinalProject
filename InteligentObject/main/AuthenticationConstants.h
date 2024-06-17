@@ -1,9 +1,9 @@
 #ifndef AUTHENTICATIONCONSTANTS_H
 #define AUTHENTICATIONCONSTANTS_H
-#define WIFI_SSID  "YOUR_SSID"
-#define WIFI_PASS  "YOUR_PASSWORD"
-#define MQTT_BROKER_HOST  "YOUR_END_POINT"
-#define CLIENT_ID "YOUR_ID"
+#define WIFI_SSID_AUTO_CONECCTION  "dogfeederfinal"
+#define WIFI_PASS_AUTO_CONECCTION  "dogfeeder7532"
+#define MQTT_BROKER_HOST  "a3i9cvbxqqn25a-ats.iot.us-east-1.amazonaws.com"
+#define CLIENT_ID "sebastianbeller76@gmail.comActuatorprac3"
 
 const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----

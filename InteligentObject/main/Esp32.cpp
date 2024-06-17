@@ -3,7 +3,6 @@
 Esp32::Esp32()
 {
   activationCategory=false;
-  // servoState=false;
   plateState=false;
   previousWeigth=0;
   foodPortion=50;
@@ -43,6 +42,9 @@ void Esp32::setFoodPortion(JsonObject inputDoc){
   if(!inputDoc["foodPortion"].isNull())
     foodPortion= inputDoc["foodPortion"].as<int>();
 }
+void Esp32::setWeigth(float weigth){
+    this->weigth=weigth;
+}
 void Esp32::reportDataToMqttClientController(MqttClientController& mqtt){
   StaticJsonDocument<SIZE_OUTPUT> outputDoc;
   outputDoc["state"]["reported"]="";
@@ -51,6 +53,7 @@ void Esp32::reportDataToMqttClientController(MqttClientController& mqtt){
   reported["hoursToFeed"] = hours;
   reported["minutesToFeed"] = minutes;
   reported["foodPortion"] = foodPortion;
+  reported["plateState"] = weigth>foodPortion;
   mqtt.publishOnTopic(outputDoc,UPDATE_TOPIC);
 }
 void Esp32::setData(JsonObject inputDoc){
@@ -69,16 +72,20 @@ void Esp32::setActivationCategory(bool activationCategory){
 bool Esp32::isServoMovementRequired(NTPClient timeClient){
   return (!plateState)&&( 
     isInTheTimeRanges(timeClient)
-    || activationCategory
+    || (activationCategory)
     ) ;
 }
-void Esp32::handleTheWeightPublication(float weigth,MqttClientController& mqtt){
+void Esp32::handleTheWeightPublication(MqttClientController& mqtt){
     StaticJsonDocument<SIZE_OUTPUT> outputDoc; 
-    bool plateState =weigth>foodPortion;
-      if(abs(previousWeigth-weigth)>1&&weigth!=-1){
+    if(weigth==-1){
+      return;
+    }
+
+    bool plateState =weigth>foodPortion; 
+    setPlateState(plateState);
+      if(abs(previousWeigth-weigth)>1){
         Serial.println("Previo"+String(previousWeigth));
         Serial.println("Peso"+String(weigth));
-        setPlateState(plateState);
         outputDoc["state"]["reported"]["plateState"] =plateState;
         float gramsEaten=max(previousWeigth,(float)0.0)-max(weigth,(float)0.0);
         if(gramsEaten>0){
